@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Wifi-Logging</string>
+    <string name="wifi_name">Wifi name</string>
+    <string name="wifi_img_description">Wifi Signal Indicator</string>
+</resources>

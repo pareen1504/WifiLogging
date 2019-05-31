@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools">
+    <data>
+        <variable
+                name="recylerListdata"
+                type="com.pd.wifilogging.model.database.ListData"/>
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="2dp"
+            android:padding="@dimen/margin_small"
+            android:background="@android:color/white">
+
+        <TextView
+                tools:text="@string/wifi_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/wifi_name_textView"
+                android:textAppearance="@style/TextAppearance.AppCompat.Large"
+                app:setWifiName="@{recylerListdata}"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                android:layout_marginTop="@dimen/margin_big"
+                android:fontFamily="@font/roboto"/>
+
+        <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:srcCompat="@drawable/ic_signal_wifi_0_bar_black_24dp"
+                app:setStrengthIndicator="@{recylerListdata}"
+                android:id="@+id/strength_indicator"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginEnd="@dimen/margin_small"
+                app:layout_constraintTop_toTopOf="parent"
+                android:layout_marginTop="@dimen/margin_big"
+                android:contentDescription="@string/wifi_img_description"/>
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/strength_text"
+                android:textAppearance="@style/TextAppearance.AppCompat"
+                app:setStrengthValue="@{recylerListdata}"
+                app:layout_constraintTop_toBottomOf="@+id/strength_indicator"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginEnd="@dimen/margin_big"
+                android:layout_marginTop="@dimen/margin_small"
+                android:fontFamily="@font/roboto"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

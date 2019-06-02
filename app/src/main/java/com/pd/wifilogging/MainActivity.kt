@@ -4,42 +4,51 @@ import android.Manifest
 import android.content.*
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
-import com.pd.wifilogging.viewmodel.MainActivityViewModel
-import com.pd.wifilogging.databinding.ActivityMainBinding
 import com.pd.wifilogging.adapter.WifiListAdapter
-import com.pd.wifilogging.model.database.ListData
-import com.pd.wifilogging.model.database.WifiDatabase
-import com.pd.wifilogging.utils.REQUEST_CHECK_SETTINGS
-import com.pd.wifilogging.utils.REQUEST_PERMISSION_LOCATION
+import com.pd.wifilogging.databinding.ActivityMainBinding
+import com.pd.wifilogging.repository.WifiScanRepository
+import com.pd.wifilogging.utils.*
+import com.pd.wifilogging.viewmodel.MainActivityViewModel
 import com.pd.wifilogging.viewmodel.ViewModelFactory
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewModel: MainActivityViewModel
     private lateinit var binding: ActivityMainBinding
-    lateinit var listData: ListData
-    lateinit var wifiManager: WifiManager
-    private lateinit var wifiScanReceiver: BroadcastReceiver
+    private lateinit var wifiManager: WifiManager
+
+    private val filter = IntentFilter().apply {
+        addAction(WifiManager.RSSI_CHANGED_ACTION)
+    }
+
+    private val wifiScanReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                WifiManager.RSSI_CHANGED_ACTION -> {
+                    viewModel.startMonitoring(wifiManager.scanResults)
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
 
+        wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+
         val application = requireNotNull(this).application
-        val datasource = WifiDatabase.getInstance(application).wifiDatabasedao
-        val viewModelFactory = ViewModelFactory(datasource, application)
+        val repository = WifiScanRepository(application)
+        val viewModelFactory = ViewModelFactory(repository)
 
         viewModel = ViewModelProviders.of(this, viewModelFactory).get(MainActivityViewModel::class.java)
         binding.viewmodel = viewModel
@@ -54,86 +63,76 @@ class MainActivity : AppCompatActivity() {
         })
 
         binding.lifecycleOwner = this
-        askPermissions()
+
+        if (versionAndroidPieandAbove()) locationpermission()
+        storagepermission()
+
     }
 
-    private fun askPermissions() {
-        if (ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
+    private fun locationpermission() {
+        if (!isPermissionGranted(Manifest.permission.ACCESS_COARSE_LOCATION) &&
+            !isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION)
         ) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(
-                    this,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            ) {
-            } else {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    ),
-                    REQUEST_PERMISSION_LOCATION
-                )
-            }
+            requestlocationpermission()
         } else {
-            if (!versionAndroidPieandAbove()) {
-                startWifiService()
-            } else {
-                createLocationRequest()
-            }
+            createLocationRequest()
+        }
+    }
+
+    private fun requestlocationpermission() {
+        if (shouldShowPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION) &&
+            shouldShowPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+        ) {
+            batchRequestPermissions(PERMISSIONS_LOCATION, REQUEST_PERMISSIONS_LOCATION)
+        } else {
+            batchRequestPermissions(PERMISSIONS_LOCATION, REQUEST_PERMISSIONS_LOCATION)
+        }
+    }
+
+    private fun storagepermission() {
+        if (!isPermissionGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        ) {
+            viewModel.isGranted(false)
+            requestStoragepermission()
+        } else {
+            viewModel.isGranted(true)
+        }
+    }
+
+    private fun requestStoragepermission() {
+        if (shouldShowPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        ) {
+            requestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_PERMISSIONS_STORAGE)
+        } else {
+            requestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_PERMISSIONS_STORAGE)
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         when (requestCode) {
-            REQUEST_PERMISSION_LOCATION -> {
-                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED))
-                    if (!versionAndroidPieandAbove()) {
-                        startWifiService()
-                    } else {
-                        createLocationRequest()
-                    }
-                else {
+            REQUEST_PERMISSIONS_LOCATION -> {
+                if (grantResults.containsOnly(PackageManager.PERMISSION_GRANTED)) {
+                    createLocationRequest()
                 }
-                return
             }
+            REQUEST_PERMISSIONS_STORAGE -> viewModel.isGranted(true)
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
-            REQUEST_CHECK_SETTINGS -> startWifiService()
+            REQUEST_CHECK_SETTINGS -> startWifiService(wifiManager)
         }
     }
 
-    private fun startWifiService() {
-
-        wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        wifiManager.setWifiEnabled(true)
-        wifiManager.startScan()
-
-        wifiScanReceiver = object : BroadcastReceiver() {
-
-            override fun onReceive(context: Context, intent: Intent) {
-                val results = wifiManager.scanResults
-                for (item in results) {
-                    if (item.SSID.isNotEmpty())
-                        listData = ListData(item.SSID, item.level)
-                    viewModel.startMonitoring(listData)
-                }
-            }
+    @Suppress("DEPRECATION")
+    private fun startWifiService(wifiManager: WifiManager) {
+        if (!wifiManager.isWifiEnabled) {
+            wifiManager.setWifiEnabled(true)
         }
-
-        val intentFilter = IntentFilter()
-        intentFilter.addAction(WifiManager.RSSI_CHANGED_ACTION)
-        registerReceiver(wifiScanReceiver, intentFilter)
-
+        wifiManager.startScan()
+        registerReceiver(wifiScanReceiver, filter)
     }
 
     private fun createLocationRequest() {
@@ -149,9 +148,7 @@ class MainActivity : AppCompatActivity() {
         val client: SettingsClient = LocationServices.getSettingsClient(this)
         val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder.build())
 
-        task.addOnSuccessListener { locationSettingsResponse ->
-            startWifiService()
-        }
+        task.addOnSuccessListener { locationSettingsResponse -> startWifiService(wifiManager) }
 
         task.addOnFailureListener { exception ->
             if (exception is ResolvableApiException) {
@@ -166,11 +163,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun versionAndroidPieandAbove(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
-
+    override fun onResume() {
+        super.onResume()
+        if (versionAndroidPieandAbove()) locationpermission()
+        storagepermission()
+    }
 
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(wifiScanReceiver)
     }
+
+    companion object {
+
+        val PERMISSIONS_LOCATION = arrayOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    }
+
 }
+
+

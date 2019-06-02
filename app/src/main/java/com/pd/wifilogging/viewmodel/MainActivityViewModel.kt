@@ -1,36 +1,36 @@
 package com.pd.wifilogging.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import com.pd.wifilogging.model.database.ListData
-import com.pd.wifilogging.model.database.WifiDatabasedao
+import android.net.wifi.ScanResult
+import androidx.lifecycle.ViewModel
+import com.pd.wifilogging.repository.WifiScanRepository
 import kotlinx.coroutines.*
 
-class MainActivityViewModel(
-    val wifiDatabasedao: WifiDatabasedao,
-    application: Application
-) : AndroidViewModel(application) {
+class MainActivityViewModel(val wifiScanRepository: WifiScanRepository) : ViewModel() {
 
-    val getScanResult = wifiDatabasedao.getAllScanData()
     private var viewModelJob = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + viewModelJob)
+    val getScanResult = wifiScanRepository.getAllResults()
 
-    fun startMonitoring(listData: ListData) {
+
+    fun startMonitoring(listData: List<ScanResult>) {
         uiScope.launch {
             insertData(listData)
         }
     }
 
-    private suspend fun insertData(listData: ListData) {
+    private suspend fun insertData(listData: List<ScanResult>) {
         withContext(Dispatchers.IO) {
-            wifiDatabasedao.insert(listData)
+            wifiScanRepository.insert(listData)
         }
     }
-
 
     override fun onCleared() {
         super.onCleared()
         viewModelJob.cancel()
+    }
+
+    fun isGranted(ispermissionGranted: Boolean) {
+        wifiScanRepository.checkStoragePermission(ispermissionGranted)
     }
 
 }

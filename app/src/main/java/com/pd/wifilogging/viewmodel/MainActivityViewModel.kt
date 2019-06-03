@@ -1,7 +1,7 @@
 package com.pd.wifilogging.viewmodel
 
-import android.net.wifi.ScanResult
 import androidx.lifecycle.ViewModel
+import com.pd.wifilogging.model.database.ListData
 import com.pd.wifilogging.repository.WifiScanRepository
 import kotlinx.coroutines.*
 
@@ -12,15 +12,27 @@ class MainActivityViewModel(val wifiScanRepository: WifiScanRepository) : ViewMo
     val getScanResult = wifiScanRepository.getAllResults()
 
 
-    fun startMonitoring(listData: List<ScanResult>) {
+    fun startMonitoring(listData: ListData) {
         uiScope.launch {
             insertData(listData)
         }
     }
 
-    private suspend fun insertData(listData: List<ScanResult>) {
+    suspend fun insertData(listData: ListData) {
         withContext(Dispatchers.IO) {
             wifiScanRepository.insert(listData)
+        }
+    }
+
+    fun removeTestData(ssid: String) {
+        uiScope.launch {
+            delete(ssid)
+        }
+    }
+
+    suspend fun delete(ssid: String) {
+        withContext(Dispatchers.IO) {
+            wifiScanRepository.delete(ssid)
         }
     }
 

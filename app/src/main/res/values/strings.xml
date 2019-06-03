@@ -2,4 +2,11 @@
     <string name="app_name">Wifi-Logging</string>
     <string name="wifi_name">Wifi name</string>
     <string name="wifi_img_description">Wifi Signal Indicator</string>
+    <string name="excellent">Signal Strength: Excellent</string>
+    <string name="fair">Signal Strength: Fair</string>
+    <string name="weak">Signal Strength: Weak</string>
+    <string name="poor">Signal Strength: Poor</string>
+    <string name="no_signal">No Signal</string>
+    <string name="tools_text_strength">strength</string>
+    <string name="filepath">sdcard/wifilog.file</string>
 </resources>

@@ -5,6 +5,7 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
@@ -14,6 +15,7 @@ import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 import com.pd.wifilogging.adapter.WifiListAdapter
 import com.pd.wifilogging.databinding.ActivityMainBinding
+import com.pd.wifilogging.model.database.ListData
 import com.pd.wifilogging.repository.WifiScanRepository
 import com.pd.wifilogging.utils.*
 import com.pd.wifilogging.viewmodel.MainActivityViewModel
@@ -33,7 +35,13 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 WifiManager.RSSI_CHANGED_ACTION -> {
-                    viewModel.startMonitoring(wifiManager.scanResults)
+                    for (item in wifiManager.scanResults) {
+                        Log.e("WifiScanRepository", "${item.SSID} ${item.level}")
+                        if (item.SSID.isNotEmpty()) {
+                            val data = ListData(item.SSID, item.level)
+                            viewModel.startMonitoring(data)
+                        }
+                    }
                 }
             }
         }
@@ -129,7 +137,7 @@ class MainActivity : AppCompatActivity() {
     @Suppress("DEPRECATION")
     private fun startWifiService(wifiManager: WifiManager) {
         if (!wifiManager.isWifiEnabled) {
-            wifiManager.setWifiEnabled(true)
+            wifiManager.isWifiEnabled = true
         }
         wifiManager.startScan()
         registerReceiver(wifiScanReceiver, filter)

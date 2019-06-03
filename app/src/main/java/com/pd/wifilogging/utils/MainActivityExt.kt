@@ -3,6 +3,7 @@ package com.pd.wifilogging.utils
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.LiveData
 
 fun AppCompatActivity.isPermissionGranted(permission: String) =
     ActivityCompat.checkSelfPermission(this, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -21,3 +22,8 @@ fun versionAndroidPieandAbove(): Boolean {
 }
 
 fun IntArray.containsOnly(num: Int): Boolean = filter { it == num }.isNotEmpty()
+
+fun <T> LiveData<T>.observeOnce(onChangeHandler: (T) -> Unit) {
+    val observer = OneTimeObserver(handler = onChangeHandler)
+    observe(observer, observer)
+}

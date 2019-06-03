@@ -1,8 +1,6 @@
 package com.pd.wifilogging.repository
 
 import android.app.Application
-import android.net.wifi.ScanResult
-import android.util.Log
 import androidx.lifecycle.LiveData
 import com.pd.wifilogging.model.database.ListData
 import com.pd.wifilogging.model.database.WifiDatabase
@@ -15,30 +13,29 @@ import java.io.IOException
 class WifiScanRepository(application: Application) {
 
     private var dao: WifiDatabasedao
-    private var getAllScanResults: LiveData<List<ListData>>
-    private var storage_permission : Boolean = false
+    lateinit var getAllScanResults: LiveData<List<ListData>>
+    var storage_permission: Boolean = false
 
     init {
         val database = WifiDatabase.getInstance(application)
         dao = database.wifiDatabasedao
-        getAllScanResults = dao.getAllScanData()
     }
 
     fun getAllResults(): LiveData<List<ListData>> {
+        getAllScanResults = dao.getAllScanData()
         return getAllScanResults
     }
 
-    fun insert(listData: List<ScanResult>) {
-        for (item in listData) {
-            Log.e("WifiScanRepository", "${item.SSID} ${item.level}")
-            if (item.SSID.isNotEmpty()) {
-                val data = ListData(item.SSID, item.level)
-                dao.insert(data)
-                if (storage_permission)
-                appendLog("Wifi Name:${data.wifiname} Strength in db : ${data.wifiStrength}"  )
-            }
-        }
+    fun insert(listData: ListData) {
+        dao.insert(listData)
+        if (storage_permission)
+            appendLog("Wifi Name:${listData.wifiname} Strength in db : ${listData.wifiStrength}")
     }
+
+    fun delete(ssid: String) {
+        dao.delete(ssid)
+    }
+
 
     private fun appendLog(text: String) {
         val logFile = File("sdcard/log.file")
@@ -61,7 +58,7 @@ class WifiScanRepository(application: Application) {
 
     }
 
-    fun checkStoragePermission(status:Boolean){
+    fun checkStoragePermission(status: Boolean) {
         this.storage_permission = status
     }
 }

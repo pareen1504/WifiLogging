@@ -10,6 +10,7 @@ import com.pd.wifilogging.utils.observeOnce
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.runner.RunWith
+import java.io.IOException
 
 
 @RunWith(AndroidJUnit4::class)
@@ -34,6 +35,7 @@ class MainViewModelTest {
     }
 
     @After
+    @Throws(IOException::class)
     fun tearDown() {
         runBlocking {
             mainViewModel.delete(result.wifiname)

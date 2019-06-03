@@ -2,6 +2,7 @@ package com.pd.wifilogging.repository
 
 import android.app.Application
 import androidx.lifecycle.LiveData
+import com.pd.wifilogging.R
 import com.pd.wifilogging.model.database.ListData
 import com.pd.wifilogging.model.database.WifiDatabase
 import com.pd.wifilogging.model.database.WifiDatabasedao
@@ -15,10 +16,12 @@ class WifiScanRepository(application: Application) {
     private var dao: WifiDatabasedao
     lateinit var getAllScanResults: LiveData<List<ListData>>
     var storage_permission: Boolean = false
+    val filePath: String
 
     init {
         val database = WifiDatabase.getInstance(application)
         dao = database.wifiDatabasedao
+        filePath = application.resources.getString(R.string.filepath)
     }
 
     fun getAllResults(): LiveData<List<ListData>> {
@@ -38,7 +41,7 @@ class WifiScanRepository(application: Application) {
 
 
     private fun appendLog(text: String) {
-        val logFile = File("sdcard/log.file")
+        val logFile = File(filePath)
         if (!logFile.exists()) {
             try {
                 logFile.createNewFile()
